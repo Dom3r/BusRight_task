@@ -1,21 +1,45 @@
 import "./App.css";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import Papa from "papaparse";
 import DataTable from "./Components/DataTable.js";
-
+// add input field with drivers name use that name
+// combine all files into to one table
+// filtering by driver name all tables in one
 function App() {
   const [csvFiles, setCsvFiles] = useState([]);
   const [districtData, setDistrictData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [filterDriver, setFilterDriver] = useState("");
+  const [combinedData, setCombinedData] = useState([]);
   const fileInputRef = useRef(null);
+
+  const combineData = (data, filterDriver) => {
+    const combinedData = [];
+
+    data.forEach((csvData) => {
+      const { title, data } = csvData;
+      data.forEach((row) => {
+        if (row.driverName.includes(filterDriver)) {
+          combinedData.push({ ...row, fileName: title });
+        }
+      });
+    });
+    return combinedData;
+  };
+  const handleFilterChange = (e) => {
+    const newFilter = e.target.value;
+    const newCombinedData = combineData(districtData, newFilter);
+    setFilterDriver(newFilter);
+    setCombinedData(newCombinedData);
+  };
 
   const handleFileUpload = () => {
     const files = fileInputRef.current.files;
-    setLoading(true);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (!csvFiles.includes(file.name)) {
         if (file.type === "text/csv") {
+          setLoading(true);
           const reader = new FileReader();
           reader.onload = (event) => {
             const text = event.target.result;
@@ -38,7 +62,6 @@ function App() {
               },
               complete: () => {
                 setCsvFiles((prevFiles) => [...prevFiles, file.name]);
-                setLoading(false);
                 alert(`File "${file.name}" was added successfully.`);
               },
             });
@@ -51,7 +74,9 @@ function App() {
         alert(`"${file.name}" has already been added`);
       }
     }
+    setLoading(false);
   };
+  combineData(districtData, filterDriver);
 
   return (
     <div className="App">
@@ -62,16 +87,16 @@ function App() {
         onChange={handleFileUpload}
         multiple
       />
+      <br />
+      <p>Driver name</p>
+      <input type="text" value={filterDriver} onChange={handleFilterChange} />
+
       {loading ? (
         <div>Loading...</div>
       ) : districtData.length > 0 ? (
         <div>
-          {districtData.map((csvData) => (
-            <div key={csvData.title}>
-              <h2>{csvData.title}</h2>
-              <DataTable data={csvData.data} />
-            </div>
-          ))}
+          <h2>Combined table</h2>
+          <DataTable data={combinedData} />
         </div>
       ) : (
         <div>
